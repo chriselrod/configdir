@@ -20,10 +20,17 @@ call plug#begin('~/.vim/plugged')
     Plug 'lifepillar/vim-solarized8'
     " Lang
     Plug 'neovim/nvim-lsp'
-    Plug 'ycm-core/YouCompleteMe'
+    Plug 'hrsh7th/cmp-nvim-lsp'
+    Plug 'hrsh7th/cmp-buffer'
+    Plug 'hrsh7th/cmp-path'
+    Plug 'hrsh7th/cmp-cmdline'
+    Plug 'hrsh7th/nvim-cmp'
+    Plug 'quangnguyen30192/cmp-nvim-ultisnips'
+    "Plug 'ycm-core/YouCompleteMe'
     Plug 'jez/vim-ispc'
     Plug 'ziglang/zig.vim'
     Plug 'rust-lang/rust.vim'
+    Plug 'simrat39/rust-tools.nvim'
     Plug 'JuliaEditorSupport/julia-vim', { 'on_ft': 'julia' }
     Plug 'sbdchd/neoformat'
     Plug 'sirver/ultisnips'
@@ -204,16 +211,270 @@ autocmd BufRead,BufNewFile $HOME/src/*/DiffEqGPU/* setlocal ts=4 sw=4
 
 " C++
 " Let clangd fully control code completion
-let g:ycm_clangd_uses_ycmd_caching = 0
-" Use installed clangd, not YCM-bundled clangd which doesn't get updates.
-let g:ycm_clangd_binary_path = exepath("clangd")
-nnoremap <leader>lf :YcmCompleter FixIt <CR>
-nnoremap <leader>ld :YcmCompleter GoTo <CR>
-nnoremap <leader>lr :YcmCompleter RefactorRename 
+"let g:ycm_clangd_uses_ycmd_caching = 0
+"" Use installed clangd, not YCM-bundled clangd which doesn't get updates.
+"let g:ycm_clangd_binary_path = exepath("clangd")
+"nnoremap <leader>lf :YcmCompleter FixIt <CR>
+"nnoremap <leader>ld :YcmCompleter GoTo <CR>
+"nnoremap <leader>lr :YcmCompleter RefactorRename 
 
 lua << EOF
-require'lspconfig'.clangd.setup{}
+local nvim_lsp = require'lspconfig'
+
+-- Use an on_attach function to only map the following keys
+-- after the language server attaches to the current buffer
+local on_attach = function(client, bufnr)
+  local function buf_set_keymap(...) vim.api.nvim_buf_set_keymap(bufnr, ...) end
+  local function buf_set_option(...) vim.api.nvim_buf_set_option(bufnr, ...) end
+
+  -- Enable completion triggered by <c-x><c-o>
+  buf_set_option('omnifunc', 'v:lua.vim.lsp.omnifunc')
+
+  -- Mappings.
+  local opts = { noremap=true, silent=true }
+
+  -- See `:help vim.lsp.*` for documentation on any of the below functions
+  buf_set_keymap('n', 'gD', '<cmd>lua vim.lsp.buf.declaration()<CR>', opts)
+  buf_set_keymap('n', 'gd', '<cmd>lua vim.lsp.buf.definition()<CR>', opts)
+  buf_set_keymap('n', 'K', '<cmd>lua vim.lsp.buf.hover()<CR>', opts)
+  buf_set_keymap('n', 'gi', '<cmd>lua vim.lsp.buf.implementation()<CR>', opts)
+  buf_set_keymap('n', '<C-k>', '<cmd>lua vim.lsp.buf.signature_help()<CR>', opts)
+  buf_set_keymap('n', '<space>wa', '<cmd>lua vim.lsp.buf.add_workspace_folder()<CR>', opts)
+  buf_set_keymap('n', '<space>wr', '<cmd>lua vim.lsp.buf.remove_workspace_folder()<CR>', opts)
+  buf_set_keymap('n', '<space>wl', '<cmd>lua print(vim.inspect(vim.lsp.buf.list_workspace_folders()))<CR>', opts)
+  buf_set_keymap('n', '<space>D', '<cmd>lua vim.lsp.buf.type_definition()<CR>', opts)
+  buf_set_keymap('n', '<space>rn', '<cmd>lua vim.lsp.buf.rename()<CR>', opts)
+  buf_set_keymap('n', '<space>ca', '<cmd>lua vim.lsp.buf.code_action()<CR>', opts)
+  buf_set_keymap('n', 'gr', '<cmd>lua vim.lsp.buf.references()<CR>', opts)
+  buf_set_keymap('n', '<space>le', '<cmd>lua vim.diagnostic.open_float()<CR>', opts)
+  buf_set_keymap('n', '[d', '<cmd>lua vim.diagnostic.goto_prev()<CR>', opts)
+  buf_set_keymap('n', ']d', '<cmd>lua vim.diagnostic.goto_next()<CR>', opts)
+  buf_set_keymap('n', '<space>lq', '<cmd>lua vim.diagnostic.setloclist()<CR>', opts)
+  buf_set_keymap('n', '<space>lf', '<cmd>lua vim.lsp.buf.formatting()<CR>', opts)
+
+end
+
+  -- Setup nvim-cmp.
+  local cmp = require'cmp'
+
+  cmp.setup({
+    snippet = {
+      -- REQUIRED - you must specify a snippet engine
+      expand = function(args)
+        -- vim.fn["vsnip#anonymous"](args.body) -- For `vsnip` users.
+        -- require('luasnip').lsp_expand(args.body) -- For `luasnip` users.
+        -- require('snippy').expand_snippet(args.body) -- For `snippy` users.
+        vim.fn["UltiSnips#Anon"](args.body) -- For `ultisnips` users.
+      end,
+    },
+    mapping = {
+      ['<C-b>'] = cmp.mapping(cmp.mapping.scroll_docs(-4), { 'i', 'c' }),
+      ['<C-f>'] = cmp.mapping(cmp.mapping.scroll_docs(4), { 'i', 'c' }),
+      -- Tab immediately completes. C-n/C-p to select.
+      ['<Tab>'] = cmp.mapping.confirm({ select = true }),
+      -- ['<C-n>'] = cmp.mapping({
+      --   i = function(fallback)
+      --     local lcmp = require('cmp')
+      --     if #lcmp.core:get_sources() > 0 and not lcmp.get_config().experimental.native_menu then
+      --       if lcmp.visible() then
+      --         lcmp.select_next_item()
+      --       else
+      --         lcmp.complete()
+      --       end
+      --     else
+      --       fallback()
+      --     end
+      --   end,
+      -- }),
+      ['<C-y>'] = cmp.config.disable, -- Specify `cmp.config.disable` if you want to remove the default `<C-y>` mapping.
+      ['<C-e>'] = cmp.mapping({
+        i = cmp.mapping.abort(),
+        c = cmp.mapping.close(),
+      }),
+      ['<CR>'] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
+    },
+    completion = {
+      autocomplete = false, -- disable auto-completion.
+    },
+    sources = cmp.config.sources({
+      { name = 'nvim_lsp' },
+      -- { name = 'vsnip' }, -- For vsnip users.
+      -- { name = 'luasnip' }, -- For luasnip users.
+      { name = 'ultisnips' }, -- For ultisnips users.
+      -- { name = 'snippy' }, -- For snippy users.
+    }, {
+      { name = 'buffer' },
+    }),
+    experimental = {
+        ghost_text = true,
+    },
+})
+
+  -- Use buffer source for `/` (if you enabled `native_menu`, this won't work anymore).
+  cmp.setup.cmdline('/', {
+    sources = {
+      { name = 'buffer' }
+    }
+  })
+
+  -- Use cmdline & path source for ':' (if you enabled `native_menu`, this won't work anymore).
+  cmp.setup.cmdline(':', {
+    sources = cmp.config.sources({
+      { name = 'path' }
+    }, {
+      { name = 'cmdline' }
+    })
+  })
+
+  -- Setup lspconfig.
+  local capabilities = require('cmp_nvim_lsp').update_capabilities(vim.lsp.protocol.make_client_capabilities())
+
+    -- Use a loop to conveniently call 'setup' on multiple servers and
+    -- map buffer local keybindings when the language server attaches
+    local servers = { 'pyright', 'clangd' }
+    for _, lsp in ipairs(servers) do
+      nvim_lsp[lsp].setup {
+        on_attach = on_attach,
+        capabilities = capabilities,
+        flags = {
+          debounce_text_changes = 150,
+        }
+      }
+    end
+    nvim_lsp.rust_analyzer.setup({
+        on_attach=on_attach,
+        capabilities = capabilities,
+    settings = {
+        ["rust-analyzer"] = {
+            assist = {
+                importGranularity = "module",
+                importPrefix = "by_self",
+                },
+            cargo = {
+                loadOutDirsFromCheck = true
+                },
+            procMacro = {
+            enable = true
+            },
+        }
+    }
+    })
+
+    local opts = {
+    tools = { -- rust-tools options
+        -- Automatically set inlay hints (type hints)
+        autoSetHints = true,
+
+        -- Whether to show hover actions inside the hover window
+        -- This overrides the default hover handler 
+        hover_with_actions = true,
+
+		-- how to execute terminal commands
+		-- options right now: termopen / quickfix
+		-- executor = require("rust-tools/executors").termopen,
+
+        runnables = {
+            -- whether to use telescope for selection menu or not
+            use_telescope = true
+
+            -- rest of the opts are forwarded to telescope
+        },
+
+        debuggables = {
+            -- whether to use telescope for selection menu or not
+            use_telescope = true
+
+            -- rest of the opts are forwarded to telescope
+        },
+
+        -- These apply to the default RustSetInlayHints command
+        inlay_hints = {
+
+            -- Only show inlay hints for the current line
+            only_current_line = false,
+
+            -- Event which triggers a refersh of the inlay hints.
+            -- You can make this "CursorMoved" or "CursorMoved,CursorMovedI" but
+            -- not that this may cause  higher CPU usage.
+            -- This option is only respected when only_current_line and
+            -- autoSetHints both are true.
+            only_current_line_autocmd = "CursorHold",
+
+            -- wheter to show parameter hints with the inlay hints or not
+            show_parameter_hints = true,
+
+            -- prefix for parameter hints
+            parameter_hints_prefix = " <- ",
+
+            -- prefix for all the other hints (type, chaining)
+            other_hints_prefix = " ➫  ",
+
+            -- whether to align to the length of the longest line in the file
+            max_len_align = false,
+
+            -- padding from the left if max_len_align is true
+            max_len_align_padding = 1,
+
+            -- whether to align to the extreme right or not
+            right_align = false,
+
+            -- padding from the right if right_align is true
+            right_align_padding = 7,
+
+            -- The color of the hints
+            highlight = "NonText",
+        },
+
+        hover_actions = {
+            -- the border that is used for the hover window
+            -- see vim.api.nvim_open_win()
+            border = {
+                {"╭", "FloatBorder"}, {"─", "FloatBorder"},
+                {"╮", "FloatBorder"}, {"│", "FloatBorder"},
+                {"╯", "FloatBorder"}, {"─", "FloatBorder"},
+                {"╰", "FloatBorder"}, {"│", "FloatBorder"}
+            },
+
+            -- whether the hover action window gets automatically focused
+            auto_focus = false
+        },
+
+        -- settings for showing the crate graph based on graphviz and the dot
+        -- command
+        crate_graph = {
+            -- Backend used for displaying the graph
+            -- see: https://graphviz.org/docs/outputs/
+            -- default: x11
+            backend = "x11",
+            -- where to store the output, nil for no output stored (relative
+            -- path from pwd)
+            -- default: nil
+            output = nil,
+            -- true for all crates.io and external crates, false only the local
+            -- crates
+            -- default: true
+            full = true,
+        }
+    },
+
+    -- all the opts to send to nvim-lspconfig
+    -- these override the defaults set by rust-tools.nvim
+    -- see https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#rust_analyzer
+	server = {
+		-- standalone file support
+		-- setting it to false may improve startup time
+		standalone = true,
+	}, -- rust-analyer options
+}
+
+require('rust-tools').setup(opts)
 EOF
+
+" Rust
+let g:rustfmt_autosave = 1
+let g:rustfmt_emit_files = 1
+let g:rustfmt_fail_silently = 0
+let g:rust_clip_command = 'xclip'
 
 " LaTeX
 let g:tex_flavor='xelatex'
