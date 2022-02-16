@@ -7,9 +7,8 @@ if status --is-interactive
   set -xg FFLAGS -g -O3 -feliminate-unused-debug-types -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=32 -m64 -fasynchronous-unwind-tables -Wp,-D_REENTRANT -ftree-loop-distribute-patterns -Wl,-z -Wl,now -Wl,-z -Wl,relro -malign-data=abi -march=native -fno-semantic-interposition -ftree-vectorize -ftree-loop-vectorize -Wl,--enable-new-dtags -Wa,-mbranches-within-32B-boundaries
   set -xg JULIA_NUM_THREADS (nproc)
 
-  set -xg PATH /home/chriselrod/.local/bin /home/chriselrod/.cargo/bin  /home/chriselrod/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/bin $PATH /home/chriselrod/local/bin
-
   alias g="git"
+  alias gg="git grep -nr"
 #  alias julia="/home/chriselrod/Documents/languages/julia/usr/bin/julia -O3 -C\"native,-prefer-256-bit\" -q"
 
   
