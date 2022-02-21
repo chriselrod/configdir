@@ -24,5 +24,6 @@ if status --is-interactive
   abbr --add --global jmp '/home/chriselrod/Documents/languages/julia/usr/bin/julia -O3 --project=~/Documents/progwork/julia/pumas -C"native,-prefer-256-bit" -q'
   abbr --add --global jrp '/home/chriselrod/Documents/languages/juliarelease/usr/bin/julia -O3 --project=~/Documents/progwork/julia/pumas -C"native,-prefer-256-bit" -q'
   abbr --add --global m 'time make -j(nproc)'
+  abbr --add --global n 'time ninja'
   # abbr --add --global mgitstatus '/home/chriselrod/Documents/libraries/multi-git-status/mgitstatus'
 end
